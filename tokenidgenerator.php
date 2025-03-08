@@ -11,15 +11,15 @@ function validateInput($input, $pattern = '/^[a-zA-Z0-9_-]+$/') {
 	return preg_match($pattern, $input) ? $input : false;
 }
 
-// Broadcaster ID/Twitch ID Verarbeitung
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_broadcaster']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+// Channel-ID Verarbeitung
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_channelid']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
 	$client_id = trim($_POST["client_id_b"]);
-	$accesstoken = trim($_POST["accesstoken"]);
+	$authtoken = trim($_POST["authtoken"]);
 	$username = trim($_POST["username"]);
-	$save_broadcaster = isset($_POST['save_broadcaster']) ? 1 : 0;
+	$save_channelid = isset($_POST['save_channelid']) ? 1 : 0;
 
-	if (validateInput($client_id) && validateInput($accesstoken, '/^[a-zA-Z0-9]+$/') && validateInput($username)) {
-		if ($save_broadcaster && isset($_POST['accept_dsgvo'])) {
+	if (validateInput($client_id) && validateInput($authtoken, '/^[a-zA-Z0-9]+$/') && validateInput($username)) {
+		if ($save_channelid && isset($_POST['accept_dsgvo'])) {
 			// Cookies setzen
 			setcookie('client_id_b', $client_id, [
 				'expires' => time() + 86400 * 30,
@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_broadcaster']) && 
 				'httponly' => true,
 				'samesite' => 'Lax'
 			]);
-			setcookie('accesstoken', $accesstoken, [
+			setcookie('authtoken', $authtoken, [
 				'expires' => time() + 86400 * 30,
 				'path' => '/',
 				'secure' => true,
@@ -42,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_broadcaster']) && 
 				'httponly' => true,
 				'samesite' => 'Lax'
 			]);
-			setcookie('save_broadcaster_checked', '1', [
+			setcookie('save_channelid_checked', '1', [
 				'expires' => time() + 86400 * 30,
 				'path' => '/',
 				'secure' => true,
@@ -52,9 +52,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_broadcaster']) && 
 		} else {
 			// Sessions setzen, wenn keine Cookies gewünscht
 			$_SESSION['client_id_b'] = $client_id;
-			$_SESSION['accesstoken'] = $accesstoken;
+			$_SESSION['authtoken'] = $authtoken;
 			$_SESSION['username'] = $username;
-			setcookie('save_broadcaster_checked', '0', [
+			setcookie('save_channelid_checked', '0', [
 				'expires' => time() + 86400 * 30,
 				'path' => '/',
 				'secure' => true,
@@ -69,31 +69,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_broadcaster']) && 
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [
 			"Client-ID: $client_id",
-			"Authorization: Bearer $accesstoken"
+			"Authorization: Bearer $authtoken"
 		]);
 
 	$response = curl_exec($ch);
 	if ($response === false) {
-			$broadcaster_id = "cURL-Fehler: ".curl_error($ch);
+			$channelid = "cURL-Fehler: ".curl_error($ch);
 		} else {
 			$data = json_decode($response, true);
-			$broadcaster_id = isset($data["data"][0]["id"]) ? $data["data"][0]["id"] : "Fehler: Benutzer nicht gefunden oder ungültige Anfrage.";
+			$channelid = isset($data["data"][0]["id"]) ? $data["data"][0]["id"] : "Fehler: Benutzer nicht gefunden oder ungültige Anfrage.";
 		}
 		error_log($response);
 		curl_close($ch);
 	} else {
-		$broadcaster_id = "Ungültige Eingabe! Nur alphanumerische Zeichen, Unterstriche und Bindestriche sind erlaubt.";
+		$channelid = "Ungültige Eingabe! Nur alphanumerische Zeichen, Unterstriche und Bindestriche sind erlaubt.";
 	}
 }
 
-// App Token Verarbeitung
-if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_apptoken']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+// Auth Token Verarbeitung
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_authtoken']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
 	$client_id = trim($_POST["client_id_a"]);
 	$client_secret = trim($_POST["client_secret"]);
-	$save_apptoken = isset($_POST['save_apptoken']) ? 1 : 0;
+	$save_authtoken = isset($_POST['save_authtoken']) ? 1 : 0;
 
 	if (validateInput($client_id) && validateInput($client_secret, '/^[a-zA-Z0-9]+$/')) {
-		if ($save_apptoken && isset($_POST['accept_dsgvo'])) {
+		if ($save_authtoken && isset($_POST['accept_dsgvo'])) {
 			// Cookies setzen
 			setcookie('client_id_a', $client_id, [
 				'expires' => time() + 86400 * 30,
@@ -109,7 +109,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_apptoken']) && $_P
 				'httponly' => true,
 				'samesite' => 'Lax'
 			]);
-			setcookie('save_apptoken_checked', '1', [
+			setcookie('save_authtoken_checked', '1', [
 				'expires' => time() + 86400 * 30,
 				'path' => '/',
 				'secure' => true,
@@ -120,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_apptoken']) && $_P
 			// Sessions setzen, wenn keine Cookies gewünscht
 			$_SESSION['client_id_a'] = $client_id;
 			$_SESSION['client_secret'] = $client_secret;
-			setcookie('save_apptoken_checked', '0', [
+			setcookie('save_authtoken_checked', '0', [
 				'expires' => time() + 86400 * 30,
 				'path' => '/',
 				'secure' => true,
@@ -142,13 +142,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_apptoken']) && $_P
 
 		$response = curl_exec($ch);
 		if ($response === false) {
-			$apptoken = "cURL-Fehler: " . curl_error($ch);
+			$authtoken = "cURL-Fehler: " . curl_error($ch);
 		} else {
 			$data = json_decode($response, true);
-			$apptoken = isset($data["access_token"]) ? $data["access_token"] : "Fehler: Token konnte nicht generiert werden.";
+			$authtoken = isset($data["access_token"]) ? $data["access_token"] : "Fehler: Token konnte nicht generiert werden.";
 			// Direkt nach Generierung in Session/Cookie speichern
-			if ($save_apptoken && isset($_POST['accept_dsgvo'])) {
-				setcookie('accesstoken', $apptoken, [
+			if ($save_authtoken && isset($_POST['accept_dsgvo'])) {
+				setcookie('authtoken', $authtoken, [
 					'expires' => time() + 86400 * 30,
 					'path' => '/',
 					'secure' => true,
@@ -156,12 +156,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['get_apptoken']) && $_P
 					'samesite' => 'Lax'
 				]);
 			} else {
-				$_SESSION['accesstoken'] = $apptoken;
+				$_SESSION['authtoken'] = $authtoken;
 			}
 		}
 		curl_close($ch);
 	} else {
-		$apptoken = "Ungültige Eingabe! Nur alphanumerische Zeichen sind erlaubt.";
+		$authtoken = "Ungültige Eingabe! Nur alphanumerische Zeichen sind erlaubt.";
 	}
 }
 
@@ -248,50 +248,50 @@ function getInputValue($cookie_key, $session_key) {
 </head>
 <body>
 	<div class="section">
-		<h2>Twitch-ID/Broadcaster ID generieren</h2>
+		<h2>Channel-ID generieren</h2>
 		<form method="post">
 			<input type="text" name="client_id_b" placeholder="Client-ID" value="<?php echo getInputValue('client_id_b', 'client_id_b'); ?>" required>
-			<input type="text" name="accesstoken" placeholder="Accesstoken" value="<?php echo getInputValue('accesstoken', 'accesstoken'); ?>" required>
+			<input type="text" name="authtoken" placeholder="Auth Token" value="<?php echo getInputValue('authtoken', 'authtoken'); ?>" required>
 			<input type="text" name="username" placeholder="Twitch Benutzername" value="<?php echo getInputValue('username', 'username'); ?>" required>
 			<br>
-			<input type="checkbox" name="save_broadcaster" id="save_broadcaster" <?php echo isset($_COOKIE['save_broadcaster_checked']) && $_COOKIE['save_broadcaster_checked'] === '1' ? 'checked' : ''; ?>>
-			<label for="save_broadcaster">Eingaben als Cookies speichern</label>
+			<input type="checkbox" name="save_channelid" id="save_channelid" <?php echo isset($_COOKIE['save_channelid_checked']) && $_COOKIE['save_channelid_checked'] === '1' ? 'checked' : ''; ?>>
+			<label for="save_channelid">Eingaben als Cookies speichern</label>
 			<br>
 			<input type="checkbox" name="accept_dsgvo" id="accept_dsgvo_b" required>
 			<label for="accept_dsgvo_b">Ich stimme der Verwendung der Daten durch Twitch zu</label>
 			<br>
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<button type="submit" name="get_broadcaster">Broadcaster ID generieren</button>
+			<button type="submit" name="get_channelid">Channel-ID generieren</button>
 		</form>
 		<p>Die Client-ID kann hier unter neue Anwendung generiert werden: <a href="https://dev.twitch.tv/console" target="_blank">https://dev.twitch.tv/console</a></p>
 
-		<?php if (isset($broadcaster_id)) { ?>
+		<?php if (isset($channelid)) { ?>
 			<h3>Ergebnis:</h3>
-			<p><?php echo htmlspecialchars($broadcaster_id); ?></p>
+			<p><?php echo htmlspecialchars($channelid); ?></p>
 		<?php } ?>
 	</div>
 
 	<div class="section">
-		<h2>App Token/Access Token/Twitch OAuth Token generieren</h2>
+		<h2>Auth Token generieren</h2>
 		<form method="post">
 			<input type="text" name="client_id_a" placeholder="Client-ID" value="<?php echo getInputValue('client_id_a', 'client_id_a'); ?>" required>
 			<input type="text" name="client_secret" placeholder="Client Secret" value="<?php echo getInputValue('client_secret', 'client_secret'); ?>" required>
 			<br>
-			<input type="checkbox" name="save_apptoken" id="save_apptoken" 
-				   <?php echo isset($_COOKIE['save_apptoken_checked']) && $_COOKIE['save_apptoken_checked'] === '1' ? 'checked' : ''; ?>>
-			<label for="save_apptoken">Eingaben als Cookies speichern</label>
+			<input type="checkbox" name="save_authtoken" id="save_authtoken" 
+				   <?php echo isset($_COOKIE['save_authtoken_checked']) && $_COOKIE['save_authtoken_checked'] === '1' ? 'checked' : ''; ?>>
+			<label for="save_authtoken">Eingaben als Cookies speichern</label>
 			<br>
 			<input type="checkbox" name="accept_dsgvo" id="accept_dsgvo_a" required>
 			<label for="accept_dsgvo_a">Ich stimme der Verwendung der Daten durch Twitch zu</label>
 			<br>
 			<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-			<button type="submit" name="get_apptoken">App Token generieren</button>
+			<button type="submit" name="get_authtoken">Auth Token generieren</button>
 		</form>
 		<p>Die Client-ID und Client Secret können hier unter neue Anwendung generiert werden: <a href="https://dev.twitch.tv/console" target="_blank">https://dev.twitch.tv/console</a></p>
 
-		<?php if (isset($apptoken)) { ?>
+		<?php if (isset($authtoken)) { ?>
 			<h3>Ergebnis:</h3>
-			<p><?php echo htmlspecialchars($apptoken); ?></p>
+			<p><?php echo htmlspecialchars($authtoken); ?></p>
 		<?php } ?>
 	</div>
 </body>
